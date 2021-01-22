@@ -1,13 +1,15 @@
 import json
-import requests
-from geopy import distance
-from pprint import pprint
+import os
+
 import folium
+import requests
+from dotenv import load_dotenv
 from flask import Flask
+from geopy import distance
 
 
 def hello_world():
-    with open('index.html') as file:
+    with open('map.html', encoding='utf-8') as file:
         return file.read()
 
 
@@ -16,53 +18,58 @@ def fetch_coordinates(apikey, place):
     params = {"geocode": place, "apikey": apikey, "format": "json"}
     response = requests.get(base_url, params=params)
     response.raise_for_status()
-    places_found = response.json(
-    )['response']['GeoObjectCollection']['featureMember']
+    places_found = response.json()['response']['GeoObjectCollection']['featureMember']
     most_relevant = places_found[0]
     lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
     return lon, lat
 
 
-with open("coffee.json", "r", encoding='CP1251') as my_file:
-    file_contents = my_file.read()
-    coffee_shops = json.loads(file_contents)
+def save_map_file(location_coordinates, nearest_coffee_shops):
+    map_file = folium.Map(location=location_coordinates[::-1], zoom_start=15)
+    for coffee_shop in nearest_coffee_shops:
+        folium.Marker(
+            [coffee_shop['longitude'], coffee_shop['latitude']],
+            popup=f"<i>{coffee_shop['title']}</i>",
+            tooltip=coffee_shop['title']
+        ).add_to(map_file)
+    map_file.save("map.html")
 
-location = input('Где вы находитесь?: ')
-# location = 'Красная площадь'
-apikey = '087c1490-c47b-4b04-a48b-23b65d591cc6'  # ваш ключ
 
-coords = fetch_coordinates(apikey, location)
-print('Ваши координтаты:', coords)
+def fetch_nearest_coffee_shops(location_coordinates):
+    with open("coffee.json", "r", encoding='CP1251') as my_file:
+        file_contents = my_file.read()
+        coffee_shops = json.loads(file_contents)
+    coffee_shops_distances = []
+    for coffee_shop in coffee_shops:
+        coffee_shop_coordinates = coffee_shop['geoData']['coordinates']
+        coffee_shops_distances.append(
+            {
+                'title': coffee_shop['Name'],
+                'distance': distance.distance(
+                    coffee_shop_coordinates[::-1],
+                    (location_coordinates[::-1])
+                ).km,
+                'latitude': coffee_shop_coordinates[0],
+                'longitude': coffee_shop_coordinates[1]
+            }
+        )
+    return sorted(coffee_shops_distances, key=lambda x: x['distance'])[:5]
 
-coffee_shops1 = []
-for coffee_shop in coffee_shops:
-    coffee_shop_coords = coffee_shop['geoData']['coordinates']
-    coffee_shops1.append({
-        'title':
-        coffee_shop['Name'],
-        'distance':
-        distance.distance(coffee_shop_coords[::-1], (coords[::-1])).km,
-        'latitude':
-        coffee_shop_coords[0],
-        'longitude':
-        coffee_shop_coords[1]
-    })
 
-nearest_coffe_shops = sorted(coffee_shops1, key=lambda x: x['distance'])[:5]    
+def main():
+    load_dotenv()
+    apikey = os.getenv('YANDEX_GEOCODER_TOKEN')
+    location = input('Где вы находитесь?: ')
+    location_coordinates = fetch_coordinates(apikey, location)
 
-pprint(nearest_coffe_shops)
+    nearest_coffee_shops = fetch_nearest_coffee_shops(location_coordinates)
 
-tooltip = "Click me!"
+    save_map_file(location_coordinates, nearest_coffee_shops)
 
-m = folium.Map(location=coords[::-1], zoom_start=12)
+    app = Flask(__name__)
+    app.add_url_rule('/', 'hello', hello_world)
+    app.run()
 
-for coffee_shop in nearest_coffe_shops:
-    folium.Marker(
-        [coffee_shop['longitude'], coffee_shop['latitude']], popup=f"<i>{coffee_shop['title']}</i>", tooltip=coffee_shop['title']
-    ).add_to(m)
 
-m.save("index.html")
-
-app = Flask(__name__)
-app.add_url_rule('/', 'hello', hello_world)
-app.run('0.0.0.0')
+if __name__ == '__main__':
+    main()
