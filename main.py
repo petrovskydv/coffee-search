@@ -8,7 +8,7 @@ from flask import Flask
 from geopy import distance
 
 
-def hello_world():
+def open_page_template():
     with open('map.html', encoding='utf-8') as file:
         return file.read()
 
@@ -24,7 +24,7 @@ def fetch_coordinates(apikey, place):
     return lon, lat
 
 
-def save_map_file(location_coordinates, nearest_coffee_shops):
+def create_markers_save_map_file(location_coordinates, nearest_coffee_shops):
     map_file = folium.Map(location=location_coordinates[::-1], zoom_start=15)
     for coffee_shop in nearest_coffee_shops:
         folium.Marker(
@@ -64,10 +64,10 @@ def main():
 
     nearest_coffee_shops = fetch_nearest_coffee_shops(location_coordinates)
 
-    save_map_file(location_coordinates, nearest_coffee_shops)
+    create_markers_save_map_file(location_coordinates, nearest_coffee_shops)
 
     app = Flask(__name__)
-    app.add_url_rule('/', 'hello', hello_world)
+    app.add_url_rule('/', 'Nearest coffees', open_page_template)
     app.run()
 
 
