@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from flask import Flask
 from geopy import distance
 
+NEAREST_COFFEE_SHOPS_AMOUNT = 5
+
 
 def open_page_template():
     with open('map.html', encoding='utf-8') as file:
@@ -27,27 +29,35 @@ def fetch_coordinates(apikey, place):
 def create_markers_save_map_file(location_latitude, location_longitude, nearest_coffee_shops):
     map_file = folium.Map(location=(location_latitude, location_longitude), zoom_start=15)
 
-    folium.Marker(
-        [location_latitude, location_longitude],
-        popup=f'<i>I\'m here</i>',
-        tooltip='I\'m here',
-        icon=folium.Icon(color="green", icon="info-sign")
-    ).add_to(map_file)
+    add_marker(location_latitude,
+               location_longitude,
+               'I\'m here',
+               'green',
+               map_file
+               )
 
     for coffee_shop in nearest_coffee_shops:
-        folium.Marker(
-            [coffee_shop['latitude'], coffee_shop['longitude']],
-            popup=f"<i>{coffee_shop['title']}</i>",
-            tooltip=coffee_shop['title']
-        ).add_to(map_file)
+        add_marker(coffee_shop['latitude'],
+                   coffee_shop['longitude'],
+                   coffee_shop['title'],
+                   'blue',
+                   map_file
+                   )
 
     map_file.save("map.html")
 
 
+def add_marker(marker_latitude, marker_longitude, marker_title, marker_color, map_file):
+    folium.Marker(
+        [marker_latitude, marker_longitude],
+        popup=f'<i>{marker_title}</i>',
+        tooltip=marker_title,
+        icon=folium.Icon(color=marker_color)
+    ).add_to(map_file)
+
+
 def fetch_nearest_coffee_shops(location_coordinates):
-    with open("coffee.json", "r", encoding='CP1251') as my_file:
-        file_contents = my_file.read()
-        coffee_shops = json.loads(file_contents)
+    coffee_shops = fetch_coffee_chops()
 
     coffee_shops_distances = []
     for coffee_shop in coffee_shops:
@@ -63,7 +73,14 @@ def fetch_nearest_coffee_shops(location_coordinates):
                 'longitude': coffee_shop_longitude
             }
         )
-    return sorted(coffee_shops_distances, key=lambda x: x['distance'])[:5]
+    return sorted(coffee_shops_distances, key=lambda x: x['distance'])[:NEAREST_COFFEE_SHOPS_AMOUNT]
+
+
+def fetch_coffee_chops():
+    with open("coffee.json", "r", encoding='CP1251') as my_file:
+        file_contents = my_file.read()
+        coffee_shops = json.loads(file_contents)
+    return coffee_shops
 
 
 def main():
