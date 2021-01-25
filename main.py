@@ -25,10 +25,10 @@ def fetch_coordinates(apikey, place):
 
 
 def create_markers_save_map_file(location_coordinates, nearest_coffee_shops):
-    map_file = folium.Map(location=location_coordinates[::-1], zoom_start=15)
+    map_file = folium.Map(location=location_coordinates, zoom_start=15)
     for coffee_shop in nearest_coffee_shops:
         folium.Marker(
-            [coffee_shop['longitude'], coffee_shop['latitude']],
+            [coffee_shop['latitude'], coffee_shop['longitude']],
             popup=f"<i>{coffee_shop['title']}</i>",
             tooltip=coffee_shop['title']
         ).add_to(map_file)
@@ -41,16 +41,16 @@ def fetch_nearest_coffee_shops(location_coordinates):
         coffee_shops = json.loads(file_contents)
     coffee_shops_distances = []
     for coffee_shop in coffee_shops:
-        coffee_shop_coordinates = coffee_shop['geoData']['coordinates']
+        coffee_shop_longitude, coffee_shop_latitude = coffee_shop['geoData']['coordinates']
         coffee_shops_distances.append(
             {
                 'title': coffee_shop['Name'],
                 'distance': distance.distance(
-                    coffee_shop_coordinates[::-1],
-                    (location_coordinates[::-1])
+                    (coffee_shop_latitude, coffee_shop_longitude),
+                    location_coordinates
                 ).km,
-                'latitude': coffee_shop_coordinates[0],
-                'longitude': coffee_shop_coordinates[1]
+                'latitude': coffee_shop_latitude,
+                'longitude': coffee_shop_longitude
             }
         )
     return sorted(coffee_shops_distances, key=lambda x: x['distance'])[:5]
@@ -60,11 +60,11 @@ def main():
     load_dotenv()
     apikey = os.getenv('YANDEX_GEOCODER_TOKEN')
     location = input('Где вы находитесь?: ')
-    location_coordinates = fetch_coordinates(apikey, location)
+    location_longitude, location_latitude = fetch_coordinates(apikey, location)
 
-    nearest_coffee_shops = fetch_nearest_coffee_shops(location_coordinates)
+    nearest_coffee_shops = fetch_nearest_coffee_shops((location_latitude, location_longitude))
 
-    create_markers_save_map_file(location_coordinates, nearest_coffee_shops)
+    create_markers_save_map_file((location_latitude, location_longitude), nearest_coffee_shops)
 
     app = Flask(__name__)
     app.add_url_rule('/', 'Nearest coffees', open_page_template)
