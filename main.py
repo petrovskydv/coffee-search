@@ -10,7 +10,7 @@ from geopy import distance
 NEAREST_COFFEE_SHOPS_AMOUNT = 5
 
 
-def open_page_template():
+def open_map_page():
     with open('map.html', encoding='utf-8') as file:
         return file.read()
 
@@ -94,7 +94,7 @@ def main():
     create_markers_save_map_file(location_latitude, location_longitude, nearest_coffee_shops)
 
     app = Flask(__name__)
-    app.add_url_rule('/', 'Nearest coffees', open_page_template)
+    app.add_url_rule('/', 'Nearest coffees', open_map_page)
     app.run()
 
 
