@@ -26,39 +26,23 @@ def fetch_coordinates(apikey, place):
     return lon, lat
 
 
-def create_markers_save_map_file(location_latitude, location_longitude, nearest_coffee_shops):
-    map_file = folium.Map(location=(location_latitude, location_longitude), zoom_start=15)
-
-    add_marker(location_latitude,
-               location_longitude,
-               'I\'m here',
-               'green',
-               map_file
-               )
-
-    for coffee_shop in nearest_coffee_shops:
-        add_marker(coffee_shop['latitude'],
-                   coffee_shop['longitude'],
-                   coffee_shop['title'],
-                   'blue',
-                   map_file
-                   )
-
-    map_file.save("map.html")
-
-
-def add_marker(marker_latitude, marker_longitude, marker_title, marker_color, map_file):
+def create_markers(location_latitude, location_longitude, nearest_coffee_shops, map_file):
     folium.Marker(
-        [marker_latitude, marker_longitude],
-        popup=f'<i>{marker_title}</i>',
-        tooltip=marker_title,
-        icon=folium.Icon(color=marker_color)
+        [location_latitude, location_longitude],
+        popup=f'<i>I\'m here</i>',
+        tooltip='I\'m here',
+        icon=folium.Icon(color='green', icon='info-sign')
     ).add_to(map_file)
 
+    for coffee_shop in nearest_coffee_shops:
+        folium.Marker(
+            [coffee_shop['latitude'], coffee_shop['longitude']],
+            popup=f'<i>{coffee_shop["title"]}</i>',
+            tooltip=coffee_shop['title']
+        ).add_to(map_file)
 
-def fetch_nearest_coffee_shops(location_coordinates):
-    coffee_shops = fetch_coffee_chops()
 
+def fetch_nearest_coffee_shops(coffee_shops, location_coordinates):
     coffee_shops_distances = []
     for coffee_shop in coffee_shops:
         coffee_shop_longitude, coffee_shop_latitude = coffee_shop['geoData']['coordinates']
@@ -76,7 +60,7 @@ def fetch_nearest_coffee_shops(location_coordinates):
     return sorted(coffee_shops_distances, key=lambda x: x['distance'])[:NEAREST_COFFEE_SHOPS_AMOUNT]
 
 
-def fetch_coffee_chops():
+def fetch_coffee_shops():
     with open("coffee.json", "r", encoding='CP1251') as my_file:
         file_contents = my_file.read()
         coffee_shops = json.loads(file_contents)
@@ -89,9 +73,12 @@ def main():
     location = input('Где вы находитесь?: ')
     location_longitude, location_latitude = fetch_coordinates(apikey, location)
 
-    nearest_coffee_shops = fetch_nearest_coffee_shops((location_latitude, location_longitude))
+    coffee_shops = fetch_coffee_shops()
+    nearest_coffee_shops = fetch_nearest_coffee_shops(coffee_shops, (location_latitude, location_longitude))
 
-    create_markers_save_map_file(location_latitude, location_longitude, nearest_coffee_shops)
+    map_file = folium.Map(location=(location_latitude, location_longitude), zoom_start=15)
+    create_markers(location_latitude, location_longitude, nearest_coffee_shops, map_file)
+    map_file.save("map.html")
 
     app = Flask(__name__)
     app.add_url_rule('/', 'Nearest coffees', open_map_page)
