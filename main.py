@@ -16,8 +16,8 @@ def open_map_page():
 
 
 def fetch_coordinates(apikey, place):
-    base_url = "https://geocode-maps.yandex.ru/1.x"
-    params = {"geocode": place, "apikey": apikey, "format": "json"}
+    base_url = 'https://geocode-maps.yandex.ru/1.x'
+    params = {'geocode': place, 'apikey': apikey, 'format': 'json'}
     response = requests.get(base_url, params=params)
     response.raise_for_status()
     places_found = response.json()['response']['GeoObjectCollection']['featureMember']
@@ -60,8 +60,8 @@ def fetch_nearest_coffee_shops(coffee_shops, location_coordinates):
     return sorted(coffee_shops_distances, key=lambda x: x['distance'])[:NEAREST_COFFEE_SHOPS_AMOUNT]
 
 
-def fetch_coffee_shops():
-    with open("coffee.json", "r", encoding='CP1251') as my_file:
+def fetch_coffee_shops(file_path):
+    with open(file_path, 'r', encoding='CP1251') as my_file:
         file_contents = my_file.read()
         coffee_shops = json.loads(file_contents)
     return coffee_shops
@@ -73,12 +73,12 @@ def main():
     location = input('Где вы находитесь?: ')
     location_longitude, location_latitude = fetch_coordinates(apikey, location)
 
-    coffee_shops = fetch_coffee_shops()
+    coffee_shops = fetch_coffee_shops('coffee.json')
     nearest_coffee_shops = fetch_nearest_coffee_shops(coffee_shops, (location_latitude, location_longitude))
 
     map_file = folium.Map(location=(location_latitude, location_longitude), zoom_start=15)
     create_markers(location_latitude, location_longitude, nearest_coffee_shops, map_file)
-    map_file.save("map.html")
+    map_file.save('map.html')
 
     app = Flask(__name__)
     app.add_url_rule('/', 'Nearest coffees', open_map_page)
